@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Finance Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#f3f6ff;--card:#fff;--ink:#17233c;--muted:#6c7891;--blue:#3157d5;--green:#12a878;--red:#e34e68;--purple:#8756d9}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(140deg,#eef2ff,#f7f9ff);color:var(--ink)}
+button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:11px 15px;background:var(--blue);color:#fff;font-weight:650}
+input,select{width:100%;padding:12px;border:1px solid #dce3f2;border-radius:11px;background:#fff;color:var(--ink)}
+label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
+.wrap{max-width:1100px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{font-size:22px;font-weight:850;letter-spacing:-.5px}.brand span{color:var(--blue)}.sub{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid #e8ecf6;border-radius:20px;padding:18px;box-shadow:0 10px 35px #263a6b0b}
+.auth{max-width:430px;margin:7vh auto}.auth h1{margin:0 0 6px}.hidden{display:none!important}
+.row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:14px 0}.stat{padding:17px;border-radius:17px;color:#fff;min-height:120px}.stat small{opacity:.9}.stat strong{display:block;font-size:25px;margin-top:12px;overflow-wrap:anywhere}.s1{background:linear-gradient(135deg,#3157d5,#6585ff)}.s2{background:linear-gradient(135deg,#07996f,#35c69a)}.s3{background:linear-gradient(135deg,#db3f5e,#ff8293)}.s4{background:linear-gradient(135deg,#7040c6,#a37af0)}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.tabs button{background:#e6ebff;color:#2946a4}.tabs button.active{background:var(--blue);color:white}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.formgrid .full{grid-column:1/-1}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid #edf0f7}th{color:var(--muted);font-size:12px} .income{color:var(--green);font-weight:700}.expense{color:var(--red);font-weight:700}
+.notice{font-size:13px;line-height:1.5;color:var(--muted);background:#f4f6fc;padding:12px;border-radius:12px;margin-top:12px}.danger{background:#fff0f2;color:#a52b42}.smallbtn{padding:8px 10px;font-size:13px}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.empty{color:var(--muted);padding:20px;text-align:center}
+@media(max-width:750px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.wrap{padding:12px}.card{padding:14px}.stat strong{font-size:22px}}
+@media(max-width:390px){.formgrid{grid-template-columns:1fr}.formgrid .full{grid-column:auto}}
+</style></head>
+<body>
+<div class="wrap">
+<header class="top"><div><div class="brand">Family <span>Finance Pro</span></div><div class="sub" id="subtitle">Your family money dashboard</div></div><div class="actions"><select id="lang" style="width:auto" aria-label="Language"><option value="en">English</option><option value="ps">پښتو</option></select><button id="logout" class="hidden">Log out</button></div></header>
+
+<section id="auth" class="card auth">
+<h1 id="authTitle">Welcome back 👋</h1><p class="sub" id="authDesc">Sign in to manage income, expenses and savings.</p>
+<div class="tabs"><button id="showLogin" class="active">Login</button><button id="showSignup">Create account</button></div>
+<form id="authForm">
+<label>Email</label><input type="email" id="email" autocomplete="email" required placeholder="you@example.com">
+<label>Password</label><input type="password" id="password" autocomplete="current-password" required minlength="8" placeholder="At least 8 characters">
+<div id="pinWrap"><label>App PIN (4–6 digits, optional for setup)</label><input type="password" id="pin" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" placeholder="••••"></div>
+<button id="authSubmit" style="width:100%;margin-top:15px">Login</button>
+</form>
+<div id="authMsg" class="notice">Online mode needs your own Supabase project settings. See README_Pashto.txt.</div>
+</section>
+
+<section id="app" class="hidden">
+<div class="row">
+<div class="stat s1"><small id="tIncome">Total income</small><strong id="totalIncome">؋0</strong></div>
+<div class="stat s2"><small id="tExpense">Total expenses</small><strong id="totalExpense">؋0</strong></div>
+<div class="stat s3"><small id="tBalance">Current balance</small><strong id="balance">؋0</strong></div>
+<div class="stat s4"><small id="tSavings">Savings goal</small><strong id="savings">؋0</strong></div>
+</div>
+<div class="tabs" id="appTabs"><button class="active" data-tab="overview">Overview</button><button data-tab="add">Add transaction</button><button data-tab="history">Transactions</button><button data-tab="goals">Savings goal</button></div>
+<div id="overview" class="grid">
+<div class="card"><h3 id="chartTitle">Income vs expenses</h3><canvas id="chart" height="210"></canvas></div>
+<div class="card"><h3 id="recentTitle">Recent transactions</h3><div id="recent"></div></div>
+</div>
+<div id="add" class="card hidden">
+<h3 id="addTitle">Add transaction</h3>
+<form id="transactionForm" class="formgrid">
+<div><label>Type</label><select id="type"><option value="income">Income</option><option value="expense">Expense</option></select></div>
+<div><label>Amount (AFN)</label><input id="amount" type="number" min="0.01" step="0.01" required placeholder="0"></div>
+<div><label>Category</label><select id="category"><option>Salary</option><option>Business</option><option>Food</option><option>Rent</option><option>Transport</option><option>Education</option><option>Health</option><option>Bills</option><option>Shopping</option><option>Savings</option><option>Other</option></select></div>
+<div><label>Date</label><input id="date" type="date" required></div>
+<div class="full"><label>Description</label><input id="description" maxlength="180" placeholder="What was this money for?"></div>
+<div class="full"><button type="submit" id="saveBtn">Save transaction</button></div>
+</form><div id="txMsg" class="notice">Transactions are private to your signed-in account when Supabase is configured correctly.</div>
+</div>
+<div id="history" class="card hidden"><h3 id="historyTitle">All transactions</h3><div class="formgrid"><div><label>Search</label><input id="search" placeholder="Search category or description"></div><div><label>Filter</label><select id="filter"><option value="all">All</option><option value="income">Income</option><option value="expense">Expenses</option></select></div></div><div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>Date</th><th>Type</th><th>Category / Description</th><th>Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<div id="goals" class="card hidden"><h3 id="goalTitle">Savings goal</h3><form id="goalForm" class="formgrid"><div><label>Goal name</label><input id="goalName" placeholder="Emergency fund" required></div><div><label>Target amount (AFN)</label><input id="goalAmount" type="number" min="1" required placeholder="50000"></div><div class="full"><button type="submit">Save goal</button></div></form><div id="goalList" class="notice">No savings goals yet.</div></div>
+<div class="notice">Security reminder: use a unique password. Never share your password or PIN. A PIN is only an app lock; online security must be enforced by Supabase authentication and database policies.</div>
+</section>
+</div>
+<script>
+const SUPABASE_URL = "https://juseybyivyhdzfzgincw.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_-8XB3pCPcSCefJ5JapW8gQ_KxIUUF-W";
+let sb=null,user=null,mode="login",transactions=[],goals=[],chart=null,lang="en";
+const $=id=>document.getElementById(id);
+const words={
+en:{subtitle:"Your family money dashboard",authTitle:"Welcome back 👋",authDesc:"Sign in to manage income, expenses and savings.",login:"Login",signup:"Create account",income:"Total income",expense:"Total expenses",balance:"Current balance",savings:"Savings goal",overview:"Overview",add:"Add transaction",history:"Transactions",goals:"Savings goal",chart:"Income vs expenses",recent:"Recent transactions",save:"Save transaction",all:"All",expenses:"Expenses",noTx:"No transactions yet.",need:"Configure Supabase to enable online login and sync.",failed:"Could not connect. Check your Supabase settings and internet connection."},
+ps:{subtitle:"د کورنۍ د پیسو ډشبورډ",authTitle:"بېرته ښه راغلاست 👋",authDesc:"د عاید، لګښت او سپما د مدیریت لپاره ننوځه.",login:"ننوتل",signup:"حساب جوړول",income:"ټول عاید",expense:"ټول لګښتونه",balance:"اوسنی بیلانس",savings:"د سپما هدف",overview:"لنډیز",add:"معامله اضافه کړه",history:"معاملې",goals:"د سپما هدف",chart:"عاید او لګښت",recent:"وروستۍ معاملې",save:"معامله ثبت کړه",all:"ټول",expenses:"لګښتونه",noTx:"تر اوسه معامله نشته.",need:"د آنلاین ننوتلو لپاره د Supabase تنظیمات بشپړ کړه.",failed:"وصل نه شو؛ تنظیمات او انټرنېټ وګوره."}
+};
+function say(k){return words[lang][k]||k}
+function money(n){return new Intl.NumberFormat("en-US",{style:"currency",currency:"AFN",maximumFractionDigits:2}).format(n||0).replace("AFN","؋")}
+function configured(){return !SUPABASE_URL.startsWith("YOUR_")&&!SUPABASE_ANON_KEY.startsWith("YOUR_")}
+function init(){ $("date").value=new Date().toISOString().slice(0,10); if(configured()){sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);sb.auth.getSession().then(({data})=>{if(data.session){user=data.session.user;showApp();loadData()}});sb.auth.onAuthStateChange((_e,s)=>{if(s){user=s.user;showApp();loadData()}else{user=null;showAuth()}})} else {$("authMsg").textContent=say("need")} }
+function showAuth(){$("auth").classList.remove("hidden");$("app").classList.add("hidden");$("logout").classList.add("hidden")}
+function showApp(){$("auth").classList.add("hidden");$("app").classList.remove("hidden");$("logout").classList.remove("hidden")}
+$("showLogin").onclick=()=>{mode="login";$("showLogin").classList.add("active");$("showSignup").classList.remove("active");$("authSubmit").textContent=say("login");$("authTitle").textContent=say("authTitle")};
+$("showSignup").onclick=()=>{mode="signup";$("showSignup").classList.add("active");$("showLogin").classList.remove("active");$("authSubmit").textContent=say("signup");$("authTitle").textContent=say("signup")};
+$("authForm").onsubmit=async e=>{e.preventDefault();if(!configured()){ $("authMsg").textContent=say("need")+" README_Pashto.txt وګوره.";return}const email=$("email").value,password=$("password").value;let res= mode==="signup"?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});if(res.error){$("authMsg").textContent=res.error.message;return}if(mode==="signup"&&!res.data.session){$("authMsg").textContent="Check your email to confirm your account, then log in.";return}user=res.data.user;showApp();await loadData()};
+$("logout").onclick=async()=>{if(sb)await sb.auth.signOut();transactions=[];showAuth()};
+$("lang").onchange=()=>{lang=$("lang").value;document.documentElement.lang=lang;document.documentElement.dir=lang==="ps"?"rtl":"ltr";$("subtitle").textContent=say("subtitle");$("authTitle").textContent=say("authTitle");$("authDesc").textContent=say("authDesc");$("tIncome").textContent=say("income");$("tExpense").textContent=say("expense");$("tBalance").textContent=say("balance");$("tSavings").textContent=say("savings");$("chartTitle").textContent=say("chart");$("recentTitle").textContent=say("recent");$("addTitle").textContent=say("add");$("historyTitle").textContent=say("history");$("goalTitle").textContent=say("goals");render()};
+document.querySelectorAll("#appTabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#appTabs button").forEach(x=>x.classList.toggle("active",x===b));["overview","add","history","goals"].forEach(id=>$(id).classList.toggle("hidden",id!==b.dataset.tab));if(b.dataset.tab==="history")renderRows()});
+async function loadData(){if(!sb||!user)return;let [tx,gl]=await Promise.all([sb.from("transactions").select("*").order("transaction_date",{ascending:false}),sb.from("savings_goals").select("*").order("created_at",{ascending:false})]);if(tx.error){$("txMsg").textContent=tx.error.message;return}transactions=tx.data||[];goals=gl.data||[];render()}
+$("transactionForm").onsubmit=async e=>{e.preventDefault();if(!sb||!user){$("txMsg").textContent=say("need");return}let item={user_id:user.id,type:$("type").value,amount:Number($("amount").value),category:$("category").value,transaction_date:$("date").value,description:$("description").value.trim()};let r=await sb.from("transactions").insert(item);if(r.error){$("txMsg").textContent=r.error.message;return}$("transactionForm").reset();$("date").value=new Date().toISOString().slice(0,10);$("txMsg").textContent="Saved successfully.";await loadData()};
+$("search").oninput=renderRows;$("filter").onchange=renderRows;
+async function delTx(id){if(!confirm("Delete this transaction?"))return;let r=await sb.from("transactions").delete().eq("id",id);if(r.error)alert(r.error.message);await loadData()}
+function renderRows(){let q=($("search").value||"").toLowerCase(),f=$("filter").value;let list=transactions.filter(t=>(f==="all"||t.type===f)&&(`${t.category} ${t.description||""}`.toLowerCase().includes(q)));$("rows").innerHTML=list.map(t=>`<tr><td>${t.transaction_date}</td><td>${t.type}</td><td>${esc(t.category)}<br><span class="sub">${esc(t.description||"")}</span></td><td class="${t.type}">${t.type==="income"?"+":"−"}${money(t.amount)}</td><td><button class="smallbtn" onclick="delTx('${t.id}')">×</button></td></tr>`).join("")||`<tr><td colspan="5" class="empty">${say("noTx")}</td></tr>`}
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){let inc=transactions.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0),exp=transactions.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0),goal=goals.reduce((s,g)=>s+Number(g.target_amount),0);$("totalIncome").textContent=money(inc);$("totalExpense").textContent=money(exp);$("balance").textContent=money(inc-exp);$("savings").textContent=money(goal);renderRows();$("recent").innerHTML=transactions.slice(0,5).map(t=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid #edf0f7"><div><b>${esc(t.category)}</b><div class="sub">${t.transaction_date} · ${esc(t.description||"")}</div></div><b class="${t.type}">${t.type==="income"?"+":"−"}${money(t.amount)}</b></div>`).join("")||`<div class="empty">${say("noTx")}</div>`;let c=$("chart").getContext("2d");if(chart)chart.destroy();chart=new Chart(c,{type:"doughnut",data:{labels:[say("income"),say("expense")],datasets:[{data:[inc,exp]}]},options:{responsive:true,plugins:{legend:{position:"bottom"}}}});$("goalList").innerHTML=goals.map(g=>`<div style="padding:9px 0"><b>${esc(g.name)}</b> — ${money(g.target_amount)}</div>`).join("")||"No savings goals yet."}
+$("goalForm").onsubmit=async e=>{e.preventDefault();if(!sb||!user){alert(say("need"));return}let r=await sb.from("savings_goals").insert({user_id:user.id,name:$("goalName").value.trim(),target_amount:Number($("goalAmount").value)});if(r.error){alert(r.error.message);return}$("goalForm").reset();await loadData()};
+init();
+</script></body></html>
